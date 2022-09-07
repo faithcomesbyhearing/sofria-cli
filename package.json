@@ -1,0 +1,25 @@
+{
+  "name": "proskomma-sofria-cli",
+  "version": "0.0.1",
+  "description": "Command Line wrapper for SOFRIA production via Proskomma",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/faithcomesbyhearing/sofria-cli.git"
+  },
+  "author": "Mark Howe",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/faithcomesbyhearing/sofria-cli.git/issues"
+  },
+  "homepage": "https://github.com/faithcomesbyhearing/sofria-cli.git#readme",
+  "dependencies": {
+    "fs-extra": "^10.1.0",
+    "path": "^0.12.7",
+    "proskomma": "^0.7.9",
+    "proskomma-json-tools": "^0.5.3"
+  }
+}
