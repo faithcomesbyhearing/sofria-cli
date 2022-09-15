@@ -4,6 +4,7 @@ if (process.argv.length < 2) {
 
 const PARENT_PATH = './output';
 
+const PromisePool = require('es6-promise-pool')
 const crypto = require('crypto').webcrypto;
 const path = require('path');
 const fse = require('fs-extra');
@@ -20,11 +21,6 @@ if (global.crypto !== 'object') {
 function zeroComplete(num, places) {
     return String(num).padStart(places, '0')
 }
-
-const offset = process.argv.length > 3 ? Number(process.argv[3]) : 0;
-const limit = process.argv.length > 4 ? Number(process.argv[4]) : Infinity;
-
-const pk = new Proskomma();
 
 const fqPath = process.argv[2]
 const usxRootDirectory = fqPath.split("/").reverse()[0];
@@ -51,41 +47,64 @@ async function getListFileFromDirectory(dirPath) {
     }
 }
 
-async function generateChapterContent(usxFileName, chapter) {
-    const chapterQuery = `{documents {sofria(indent: 2, chapter: ${chapter}) } }`;
-    const gqlObject = pk.gqlQuerySync(chapterQuery);
+function generateChapterContent(chapter, usxFile, pk) {
+    return new Promise(function (resolve, _) {
+        const chapterQuery = `{documents {sofria(indent: 2, chapter: ${chapter}) } }`;
+        const gqlObject = pk.gqlQuerySync(chapterQuery);
 
-    if (gqlObject && gqlObject.data && gqlObject.data.documents[0]) {
-        const chapterJson = gqlObject.data.documents[0].sofria;
-        writeUsxJsonFile({
-            name: usxFileName,
-            chapter: chapter,
-            jsonContent: chapterJson,
-        });
-    }
+        if (gqlObject && gqlObject.data && gqlObject.data.documents[0]) {
+            const chapterJson = gqlObject.data.documents[0].sofria;
+            writeUsxJsonFile({
+                name: usxFile.name,
+                chapter: chapter,
+                jsonContent: chapterJson,
+            });
+        }
+
+        resolve(true);
+    });
 }
 
-async function generateJsonContentByUSXFile(usxFile) {
-    const content = fse.readFileSync(usxFile.fullpath).toString();
-    const stackChapterContent = [];
+function generateJsonContentByUSXFile(usxFile) {
+    return new Promise(function (resolve, _) {
+        const content = fse.readFileSync(usxFile.fullpath).toString();
 
-    if (content !== "" && usxFile.suffix !== "") {
-        pk.importDocument({
-            lang: "xxx",
-            abbr: ""
-        }, usxFile.suffix, content);
-        const chaptersQuery = `{documents {cIndexes { chapter } } }`;
-        const chaptersResult = pk.gqlQuerySync(chaptersQuery);
-        const chapters = chaptersResult
-            .data
-            .documents[0]
-            .cIndexes.map(ci => ci.chapter);
-        chapters.forEach(async function(chapter) {
-            generateChapterContent(usxFile.name, chapter)
-        });
-    }
+        if (content !== "" && usxFile.suffix !== "") {
+            const pk = new Proskomma();
+            pk.importDocument({
+                lang: "xxx",
+                abbr: ""
+            }, usxFile.suffix, content);
+            const chaptersQuery = `{documents {cIndexes { chapter } } }`;
+            const chaptersResult = pk.gqlQuerySync(chaptersQuery);
+            const chapters = chaptersResult
+                .data
+                .documents[0]
+                .cIndexes.map(ci => ci.chapter);
 
-    return stackChapterContent;
+            let count = 0;
+            const promiseChapterProducer = function () {
+                if (count < chapters.length) {
+                    const chapterToProcess = chapters[count];
+                    ++count;
+                    return generateChapterContent(chapterToProcess, usxFile, pk)
+                } else {
+                    return null
+                }
+            };
+
+            let poolChapter = new PromisePool(promiseChapterProducer, 4)
+
+            poolChapter.start()
+                .then(function () {
+                    console.log(`Complete USX File: ${usxFile.fullpath}`);
+                }, function (error) {
+                    console.log(`Error processing USX File ${usxFile.fullpath}` + error.message);
+                });
+        }
+
+        resolve(true);
+    });
 }
 
 async function writeUsxJsonFile(usxFile) {
@@ -102,21 +121,34 @@ async function writeUsxJsonFile(usxFile) {
     }
 }
 
-async function generateJsonContentByUSXFileList(listUSXFiles) {
+async function main() {
+    console.log('Start process..');
+
+    const listFilesToProcess = await getListFileFromDirectory(fqPath);
     const folderFile = path.join(PARENT_PATH, `${usxRootDirectory}-json`);
     await fse.mkdir(folderFile, {
         recursive: true
     });
 
-    listUSXFiles.forEach(async function(usxFile) {
-        generateJsonContentByUSXFile(usxFile);
-    })
-}
+    let count = 0;
+    const promiseFileProducer = function () {
+        if (count < listFilesToProcess.length) {
+            const usxFileToProcess = listFilesToProcess[count];
+            ++count;
+            return generateJsonContentByUSXFile(usxFileToProcess)
+        } else {
+            return null
+        }
+    };
 
-async function main() {
-    const listFiles = await getListFileFromDirectory(fqPath);
+    let pool = new PromisePool(promiseFileProducer, 5)
 
-    generateJsonContentByUSXFileList(listFiles.slice(offset, limit));
+    pool.start()
+        .then(function () {
+            console.log(`File list (${listFilesToProcess.length}) processing completed`);
+        }, function (error) {
+            console.log('Error processing file list' + error.message);
+        });
 }
 
 main();
