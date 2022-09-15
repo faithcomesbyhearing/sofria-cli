@@ -1,44 +1,154 @@
-const path = require('path');
-const fse = require('fs-extra');
-const {Proskomma} = require('proskomma');
-
-// CLI: sofria-mediaId <USX FILESET DIRECTORY>
-// example: sofria-mediaId testdata/ENGESVN_ET-usx
-// result: create a corresponding sofria json fileset, eg:
-//  1. create testdata/ENGESVN_ET-json/ directory (note that it is adjacent to the USX FILESET DIRECTORY)
-//  2. populate it with single-chapter sofria json files (created from the input usx files)
-
-if (process.argv.length !== 5) {
+if (process.argv.length < 2) {
     throw new Error(`usage: sofria-mediaId <USX FILESET DIRECTORY>`);
 }
 
-const pk = new Proskomma();
+const PARENT_PATH = './output';
 
-/*
- FIXME: find all files in specified directory which have extension .usx. The expectation is that each usx file contains one book
- Loop over each usx book file and associate with fqPath
- */
+const PromisePool = require('es6-promise-pool')
+const crypto = require('crypto').webcrypto;
+const path = require('path');
+const fse = require('fs-extra');
+const {
+    Proskomma
+} = require('proskomma');
 
-// lines 20-33 will be in the book loop, process a single usx book file. Used later, book_id would be of the form 040MAT
-const fqPath = xx
-
-const content = fse.readFileSync(fqPath).toString();
-const suffix = fqPath.split(".").reverse()[0];
-/// FIXME: change xxx and yyy to empty strings
-pk.importDocument({lang: "xxx", abbr: "yyy"}, suffix, content);
-// I assume that xxx and yyy are embedded in the json somewhere?
-const chaptersQuery = `{documents {cIndexes { chapter } } }`;
-const chaptersResult = pk.gqlQuerySync(chaptersQuery);
-const ret = {};
-for (const chapter of chaptersResult.data.documents[0].cIndexes.map(ci => ci.chapter)) {
-    const chapterQuery = `{documents {sofria(indent: 2, chapter: ${chapter}) } }`;
-    // FIXME: instead of adding the chapter to a larger document to be returned, write one file per chapter
-    // example: given an input usx file ENGESVN_ET-usx/040MAT.usx, create ENGESVN_ET-json/040MAT_{chapter}.json
-    // where chapter is a zero-padded three-digit integer, one for each chapter in the input usx file.
-    // so just use the input filename head, with _{chapter}.json at the end
-    chapter_json = JSON.parse(pk.gqlQuerySync(chapterQuery).data.documents[0].sofria);
-    // output chapter_json to outfile
+if (global.crypto !== 'object') {
+    global.crypto = {
+        getRandomValues: (array) => crypto.getRandomValues(array)
+    };
 }
 
+function zeroComplete(num, places) {
+    return String(num).padStart(places, '0')
+}
 
-console.log(JSON.stringify(ret, null, 2));
+const fqPath = process.argv[2]
+const usxRootDirectory = fqPath.split("/").reverse()[0];
+
+async function getListFileFromDirectory(dirPath) {
+    try {
+        const filesUsx = await fse.readdir(dirPath);
+        const listFiles = [];
+        for (const fileUsx of filesUsx) {
+            const fileFormat = fileUsx.split(".");
+            const name = fileFormat[0] ? fileFormat[0] : "";
+            const suffix = fileFormat[1] ? fileFormat[1] : "";
+
+            listFiles.push({
+                fullpath: path.join(dirPath, fileUsx),
+                name,
+                suffix,
+                fullname: fileUsx,
+            });
+        }
+        return listFiles;
+    } catch (err) {
+        console.error(`Unable to read directory: ${dirPath}`, err);
+    }
+}
+
+function generateChapterContent(chapter, usxFile, pk) {
+    return new Promise(function (resolve, _) {
+        const chapterQuery = `{documents {sofria(indent: 2, chapter: ${chapter}) } }`;
+        const gqlObject = pk.gqlQuerySync(chapterQuery);
+
+        if (gqlObject && gqlObject.data && gqlObject.data.documents[0]) {
+            const chapterJson = gqlObject.data.documents[0].sofria;
+            writeUsxJsonFile({
+                name: usxFile.name,
+                chapter: chapter,
+                jsonContent: chapterJson,
+            });
+        }
+
+        resolve(true);
+    });
+}
+
+function generateJsonContentByUSXFile(usxFile) {
+    return new Promise(function (resolve, _) {
+        const content = fse.readFileSync(usxFile.fullpath).toString();
+
+        if (content !== "" && usxFile.suffix !== "") {
+            const pk = new Proskomma();
+            pk.importDocument({
+                lang: "xxx",
+                abbr: ""
+            }, usxFile.suffix, content);
+            const chaptersQuery = `{documents {cIndexes { chapter } } }`;
+            const chaptersResult = pk.gqlQuerySync(chaptersQuery);
+            const chapters = chaptersResult
+                .data
+                .documents[0]
+                .cIndexes.map(ci => ci.chapter);
+
+            let count = 0;
+            const promiseChapterProducer = function () {
+                if (count < chapters.length) {
+                    const chapterToProcess = chapters[count];
+                    ++count;
+                    return generateChapterContent(chapterToProcess, usxFile, pk)
+                } else {
+                    return null
+                }
+            };
+
+            let poolChapter = new PromisePool(promiseChapterProducer, 4)
+
+            poolChapter.start()
+                .then(function () {
+                    console.log(`Complete USX File: ${usxFile.fullpath}`);
+                }, function (error) {
+                    console.log(`Error processing USX File ${usxFile.fullpath}` + error.message);
+                });
+        }
+
+        resolve(true);
+    });
+}
+
+async function writeUsxJsonFile(usxFile) {
+    const folderFile = path.join(PARENT_PATH, `${usxRootDirectory}-json`);
+    const newFile = path.join(
+        folderFile,
+        `${usxFile.name}_${zeroComplete(usxFile.chapter, 3)}.json`,
+    );
+
+    try {
+        await fse.outputFile(newFile, usxFile.jsonContent);
+    } catch (err) {
+        console.error(`Error it can not create file: ${newFile} `, err);
+    }
+}
+
+async function main() {
+    console.log('Start process..');
+
+    const listFilesToProcess = await getListFileFromDirectory(fqPath);
+    const folderFile = path.join(PARENT_PATH, `${usxRootDirectory}-json`);
+    await fse.mkdir(folderFile, {
+        recursive: true
+    });
+
+    let count = 0;
+    const promiseFileProducer = function () {
+        if (count < listFilesToProcess.length) {
+            const usxFileToProcess = listFilesToProcess[count];
+            ++count;
+            return generateJsonContentByUSXFile(usxFileToProcess)
+        } else {
+            return null
+        }
+    };
+
+    let pool = new PromisePool(promiseFileProducer, 5)
+
+    pool.start()
+        .then(function () {
+            console.log(`File list (${listFilesToProcess.length}) processing completed`);
+        }, function (error) {
+            console.log('Error processing file list' + error.message);
+        });
+}
+
+main();
