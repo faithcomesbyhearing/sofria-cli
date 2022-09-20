@@ -5,7 +5,7 @@ if (process.argv.length < 2) {
 const PARENT_PATH = './output';
 
 const PromisePool = require('es6-promise-pool')
-const crypto = require('crypto').webcrypto;
+const crypto = require('crypto');
 const path = require('path');
 const fse = require('fs-extra');
 const {
@@ -14,7 +14,13 @@ const {
 
 if (global.crypto !== 'object') {
     global.crypto = {
-        getRandomValues: (array) => crypto.getRandomValues(array)
+        getRandomValues: (array) => {
+            if (crypto.webcrypto && crypto.webcrypto.getRandomValues) {
+                return crypto.webcrypto.getRandomValues(array);
+            }
+
+            return crypto.randomBytes(array.length);
+        }
     };
 }
 
@@ -24,6 +30,20 @@ function zeroComplete(num, places) {
 
 const fqPath = process.argv[2]
 const usxRootDirectory = fqPath.split("/").reverse()[0];
+
+let outputDir = process.argv[3];
+
+if (outputDir) {
+    if (!fse.existsSync(outputDir)) {
+        throw new Error(`ERROR: Output directory: ${outputDir} must exist.`);
+    }
+
+    if (!outputDir.endsWith("/")) {
+        outputDir += "/";
+    }
+} else {
+    outputDir = PARENT_PATH;
+}
 
 async function getListFileFromDirectory(dirPath) {
     try {
@@ -108,7 +128,7 @@ function generateJsonContentByUSXFile(usxFile) {
 }
 
 async function writeUsxJsonFile(usxFile) {
-    const folderFile = path.join(PARENT_PATH, `${usxRootDirectory}-json`);
+    const folderFile = path.join(outputDir, `${usxRootDirectory}-json`);
     const newFile = path.join(
         folderFile,
         `${usxFile.name}_${zeroComplete(usxFile.chapter, 3)}.json`,
@@ -125,7 +145,7 @@ async function main() {
     console.log('Start process..');
 
     const listFilesToProcess = await getListFileFromDirectory(fqPath);
-    const folderFile = path.join(PARENT_PATH, `${usxRootDirectory}-json`);
+    const folderFile = path.join(outputDir, `${usxRootDirectory}-json`);
     await fse.mkdir(folderFile, {
         recursive: true
     });
