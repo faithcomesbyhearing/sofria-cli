@@ -29,9 +29,14 @@ function zeroComplete(num, places) {
 }
 
 const fqPath = process.argv[2]
-const usxRootDirectory = fqPath.split("/").reverse()[0];
 
 let outputDir = process.argv[3];
+
+const outputFolderName = process.argv[4];
+
+const usxRootDirectory = outputFolderName
+    ? outputFolderName
+    : fqPath.split("/").reverse()[0];
 
 if (outputDir) {
     if (!fse.existsSync(outputDir)) {
