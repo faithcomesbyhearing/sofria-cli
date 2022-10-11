@@ -20,7 +20,7 @@
     "es6-promise-pool": "^2.5.0",
     "fs-extra": "^10.1.0",
     "path": "^0.12.7",
-    "proskomma": "^0.7.9",
-    "proskomma-json-tools": "^0.5.3"
+    "proskomma": "^0.7.15",
+    "proskomma-json-tools": "^0.5.6"
   }
 }
