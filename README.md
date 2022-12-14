@@ -80,6 +80,21 @@ The above test should create 28 .json files
 ls -1 output/Akawaio_N2AKEBSS_USX-json/ |  wc -l
 ```
 
+- ENGNKJO1ET
+
+```shell
+# clean output folder:
+rm -rf output/ENGNKJO1ET-json/*.*
+# run sofria cli
+node biblebrain_uploader.js run test/input/ENGNKJO1ET/ --generate-json=./output/ENGNKJO1ET-json
+```
+
+The above test should create 200 .json files
+
+```shell
+ls -1 output/ENGNKJO1ET-json/ |  wc -l
+```
+
 # test verses
 
 ```shell
