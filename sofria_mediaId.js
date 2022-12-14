@@ -4,6 +4,8 @@ const crypto = require("crypto");
 const path = require("path");
 const fse = require("fs-extra");
 const { Proskomma } = require("proskomma");
+const NUM_USX_FILES_TO_PROCESS_ASYNC = 5;
+const NUM_CHAPTERS_TO_PROCESS_ASYNC = 4;
 
 if (global.crypto !== "object") {
   global.crypto = {
@@ -78,7 +80,10 @@ const generateJsonContentByUSXFile = function (usxFile, jsonPathOutput) {
         }
       };
 
-      let poolChapter = new PromisePool(promiseChapterProducer, 6);
+      const poolChapter = new PromisePool(
+        promiseChapterProducer,
+        NUM_CHAPTERS_TO_PROCESS_ASYNC
+      );
 
       poolChapter.start().then(
         function () {
@@ -143,7 +148,10 @@ const run = async function (usxPathInput, jsonPathOutput) {
     }
   };
 
-  let pool = new PromisePool(promiseFileProducer, 2);
+  const pool = new PromisePool(
+    promiseFileProducer,
+    NUM_USX_FILES_TO_PROCESS_ASYNC
+  );
 
   pool.start().then(
     function () {
