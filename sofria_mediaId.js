@@ -78,7 +78,7 @@ const generateJsonContentByUSXFile = function (usxFile, jsonPathOutput) {
         }
       };
 
-      let poolChapter = new PromisePool(promiseChapterProducer, 4);
+      let poolChapter = new PromisePool(promiseChapterProducer, 6);
 
       poolChapter.start().then(
         function () {
@@ -143,7 +143,7 @@ const run = async function (usxPathInput, jsonPathOutput) {
     }
   };
 
-  let pool = new PromisePool(promiseFileProducer, 5);
+  let pool = new PromisePool(promiseFileProducer, 2);
 
   pool.start().then(
     function () {
