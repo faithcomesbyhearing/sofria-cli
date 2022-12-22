@@ -7,6 +7,7 @@ class Verses extends Model {
       "CREATE TABLE IF NOT EXISTS verses(" +
       "sequence integer not null primary key," +
       "reference text not null, " +
+      "verse_sequence integer not null, " +
       "text text not null)";
     this.db.executeDDL(statement, function (err) {
       if (err instanceof IOError) {
@@ -35,7 +36,8 @@ class Verses extends Model {
       uniqueTest.set(key, priorVerse);
       priorVerse = key;
     }
-    const statement = "INSERT INTO verses(reference, text) VALUES (?,?)";
+    const statement =
+      "INSERT INTO verses(reference, verse_sequence, text) VALUES (?,?,?)";
     this.db.bulkExecuteDML(statement, array, function (count) {
       if (count instanceof IOError) {
         callback(count);
@@ -53,7 +55,7 @@ class Verses extends Model {
       array[i] = "?";
     }
     const statement =
-      "SELECT reference, text FROM verses WHERE reference IN (" +
+      "SELECT reference, verse_sequence, text FROM verses WHERE reference IN (" +
       array.join(",") +
       ") order by rowid";
     this.db.selectSSIF(statement, values, function (results) {

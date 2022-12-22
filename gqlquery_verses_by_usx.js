@@ -84,23 +84,116 @@ const printError = function (err) {
   }
 };
 
+const removeAlphabetLetters = function (string) {
+  const regex = /[a-zA-Z]/g;
+  return string.replace(regex, "");
+};
+
+const getVerseRowsFromChapters = function (verses, chapter, bookCode) {
+  const result = [];
+
+  verses.forEach((verse) => {
+    if (verse.verseRange !== "0" && verse.verseRange !== 0) {
+      const verseRange = removeSpecialChar(verse.verseRange);
+      const reference = bookCode + ":" + chapter + ":" + verseRange;
+
+      const verseRangeArray = verseRange.split(/[-,]/g);
+      // Maybe, a verse is represented as NUMBER + Letter e.g. "3a" or similar
+      // So, we need to separate the NUMBER to store it into an number column for
+      // handle the sorting process
+      const verseStart = parseInt(removeAlphabetLetters(verseRangeArray[0]));
+      const verseEnd =
+        verseRangeArray.length > 1
+          ? parseInt(removeAlphabetLetters(verseRangeArray[1]))
+          : null;
+      result.push({
+        reference,
+        verseSequence: verseStart,
+        verseEnd: verseEnd,
+        text: verse.text,
+      });
+    }
+  });
+
+  return result;
+};
+
+const getListVerseSequence = function (verses) {
+  const verseByChapter = [];
+
+  verses.forEach((verse) => {
+    verseByChapter.push(verse.verseSequence);
+    if (verse.verseEnd !== null) {
+      const verseRangeDiff = verse.verseEnd - verse.verseSequence;
+      // we need to populate the range of verses from verseSequence to verseEnd including verseEnd
+      if (verseRangeDiff > 0) {
+        for (let idx = 1; idx <= verseRangeDiff; ++idx) {
+          verseByChapter.push(verse.verseSequence + idx);
+        }
+      }
+    }
+  });
+
+  return verseByChapter;
+};
+
+const getMissedVerses = function (verseSequenceList) {
+  for (let vidx = 0; vidx < verseSequenceList.length - 1; ++vidx) {
+    const verseSequenceDiff =
+      verseSequenceList[vidx + 1] - verseSequenceList[vidx];
+
+    if (verseSequenceDiff > 1) {
+      const missedVerses = [];
+      for (let idx = 1; idx < verseSequenceDiff; ++idx) {
+        missedVerses.push(verseSequenceList[vidx] + idx);
+      }
+
+      return missedVerses;
+    }
+  }
+
+  return [];
+};
+
 const getVersesToInsert = function (usxJson) {
-  const versesRows = [];
+  let versesRows = [];
 
   if (usxJson.chapters) {
     usxJson.chapters.forEach((chapter) => {
       if (chapter.verses) {
-        chapter.verses.forEach((verse) => {
-          if (verse.verseRange !== "0" && verse.verseRange !== 0) {
-            const reference =
-              usxJson.bookCode +
-              ":" +
-              chapter.chapter +
-              ":" +
-              removeSpecialChar(verse.verseRange);
-            versesRows.push([reference, verse.text]);
-          }
-        });
+        // Get list of verse rows to insert but with a object format.
+        // verse = {reference, verseSequence, verseEnd, text}
+        const versesListByChapter = getVerseRowsFromChapters(
+          chapter.verses,
+          chapter.chapter,
+          usxJson.bookCode
+        );
+
+        // Get a list of numbers that indicates the list of verses by chapter e.g. [1,2,3,4,...,n]
+        const verseSequenceList = getListVerseSequence(versesListByChapter);
+        verseSequenceList.sort((nextVerse, prevVerse) => nextVerse - prevVerse);
+
+        // Validate if the list of verses has missed verses checking if the list of numbers is not sequential list
+        const missedVerses = getMissedVerses(verseSequenceList);
+
+        if (missedVerses.length > 0) {
+          throw new Error(
+            `ERROR: verses: ${missedVerses.join(",")} in Book: ${
+              usxJson.bookCode
+            } Chapter: ${chapter.chapter} are missing.`
+          );
+        }
+
+        const chapterVersesRows = versesListByChapter.map((verse) => [
+          verse.reference,
+          verse.verseSequence,
+          verse.text,
+        ]);
+        chapterVersesRows.sort(
+          (nextVerse, prevVerse) => nextVerse[1] - prevVerse[1]
+        );
+
+        versesRows = versesRows.concat(chapterVersesRows);
       }
     });
   }
@@ -186,4 +279,8 @@ const run = async function (fqPath, datatabaseInput) {
   }
 };
 
+module.exports.getListVerseSequence = getListVerseSequence;
+module.exports.getVerseRowsFromChapters = getVerseRowsFromChapters;
+module.exports.getMissedVerses = getMissedVerses;
+module.exports.getVersesToInsert = getVersesToInsert;
 module.exports.run = run;

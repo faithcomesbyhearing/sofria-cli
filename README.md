@@ -27,7 +27,7 @@ tableContents(code, heading, title, name, chapters)
 2. The `verses` table will store data related to each verse for each book and the fields are:
 
 ```sql
-verses(reference, text)
+verses(reference, verse_sequence, text)
 ```
 
 - The `reference` field is a string related to book code, chapter number and verse range e.g. `ACT:13:38-39`. The reference value has the following format:
@@ -37,6 +37,8 @@ BOOK_CODE:CHAPTER_NUMBER:VERSE_RANGE
 ```
 
 - The `text` field is verse content.
+
+- The `verse_sequence` field is a number column to guarantece that the verses records can be sorted correctly from biblebrain when it (biblebrain) pulls these records. Occasionally, a verse range is represented as NUMBER + Letter e.g. "3a" so, we need to separate the NUMBER to store it into an number column for sorting. This number will be stored into `verse_sequence` field
 
 # E.g
 
@@ -78,6 +80,21 @@ The above test should create 28 .json files
 
 ```shell
 ls -1 output/Akawaio_N2AKEBSS_USX-json/ |  wc -l
+```
+
+- ENGNKJO1ET
+
+```shell
+# clean output folder:
+rm -rf output/ENGNKJO1ET-json/*.*
+# run sofria cli
+node biblebrain_uploader.js run test/input/ENGNKJO1ET/ --generate-json=./output/ENGNKJO1ET-json
+```
+
+The above test should create 200 .json files
+
+```shell
+ls -1 output/ENGNKJO1ET-json/ |  wc -l
 ```
 
 # test verses
