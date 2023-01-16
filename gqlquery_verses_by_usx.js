@@ -48,22 +48,25 @@ const generateJsonContentByUSXFile = async function (usxFile) {
 
       return {
         chapter: ci.chapter,
-        verses: ci.verses.reduce(
-          (result, verse) =>
-            verse.verse.length > 0 &&
-            !hashIdVerseRange.has(
-              `${ci.chapter}${bookCode}${verse.verse[0].verseRange}`
-            )
-              ? hashIdVerseRange.set(
-                  `${ci.chapter}${bookCode}${verse.verse[0].verseRange}`
-                ) &&
-                result.concat({
-                  verseRange: verse.verse[0].verseRange,
-                  text: verse.verse[0].text,
-                })
-              : result,
-          []
-        ),
+        verses: ci.verses.reduce((result, verse) => {
+          verse.verse.forEach((verseContent) => {
+            if (
+              !hashIdVerseRange.has(
+                `${ci.chapter}${bookCode}${verseContent.verseRange}`
+              )
+            ) {
+              hashIdVerseRange.set(
+                `${ci.chapter}${bookCode}${verseContent.verseRange}`
+              );
+              result = result.concat({
+                verseRange: verseContent.verseRange,
+                text: verseContent.text,
+              });
+            }
+          });
+
+          return result;
+        }, []),
       };
     });
 
