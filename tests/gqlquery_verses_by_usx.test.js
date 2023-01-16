@@ -51,6 +51,15 @@ const versesTest6 = [
   { verseRange: "21", text: "chapter 6 test 21" },
 ];
 
+const versesTest7 = [
+  { verseRange: "1", text: "chapter 7 test 1" },
+  { verseRange: "2", text: "chapter 7 test 2" },
+  { verseRange: "3", text: "chapter 7 test 3" },
+  { verseRange: "4", text: "chapter 7 test 4" },
+  { verseRange: "5-6a", text: "chapter 7 test 5-6a" },
+  { verseRange: "6b", text: "chapter 7 test 6b" },
+];
+
 const usxJsonTest = {
   bookCode: "bookCodeTest",
   chapters: [
@@ -176,4 +185,33 @@ test("Missed Verse Range diff > 1 test", function (t) {
 
   t.equal(rangeVerseSequence, 4);
   t.equal(rangeVerseText, "chapter 6 test 4-20");
+});
+
+test("Same verse number but with different sub-category a and b", function (t) {
+  t.plan(5);
+
+  const usxJsonTesTemp = {
+    bookCode: "bookCodeTest",
+    chapters: [
+      { verses: versesTest1, chapter: 1 },
+      { verses: versesTest7, chapter: 2 },
+    ],
+  };
+
+  const verseRow = populateDBHandler.getVersesToInsert(usxJsonTesTemp);
+  const lastIndex = verseRow.length - 1;
+
+  t.equal(verseRow.length, 12);
+
+  const lastVerseSequence = verseRow[lastIndex][1];
+  const lastVerseText = verseRow[lastIndex][2];
+
+  t.equal(lastVerseSequence, 6);
+  t.equal(lastVerseText, "chapter 7 test 6b");
+
+  const rangeVerseSequence = verseRow[lastIndex - 1][1];
+  const rangeVerseText = verseRow[lastIndex - 1][2];
+
+  t.equal(rangeVerseSequence, 5);
+  t.equal(rangeVerseText, "chapter 7 test 5-6a");
 });
