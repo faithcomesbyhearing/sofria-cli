@@ -97,8 +97,14 @@ The above test should create 200 .json files
 ls -1 output/ENGNKJO1ET-json/ |  wc -l
 ```
 
+# unit tests
+```shell
+node tests/gqlquery_verses_by_usx.test.js
+```
+
 # test verses
 
+## Case 1
 ```shell
 # clean JSON output folder:
 rm -rf output/Akawaio_N2AKEBSS_USX-json/*.*
@@ -140,6 +146,51 @@ The above test should create 28 .json files as well
 
 ```shell
 ls -1 output/Akawaio_N2AKEBSS_USX-json/ |  wc -l
+```
+
+## Case 2
+
+```shell
+# clean JSON output folder:
+rm -rf output/TXQWYIN_ET-json/*.*
+```
+
+```shell
+# clean output folder:
+rm -rf ./output/TXQWYIN1ET-db
+```
+
+```shell
+# create output folder:
+mkdir ./output/TXQWYIN1ET-db
+```
+
+```shell
+# create db file:
+touch ./output/TXQWYIN1ET-db/TXQWYIN1ET.db
+```
+
+```shell
+node biblebrain_uploader.js run test/input/TXQWYIN1ET/ --populate-db=./output/TXQWYIN1ET-db/TXQWYIN_ET.db --generate-json=./output/TXQWYIN_ET-json
+```
+
+- Outcome
+
+```shell
+Generate JSON => Generate JSON filese - Start process..
+Populate DB - Start process..
+Populate DB => Complete:  Markus
+Populate DB => success
+Generate JSON => File list (1) processing completed
+Generate JSON => Complete USX File: test/input/TXQWYIN1ET/041MRK.usx
+load verses success, rowcount 634
+load tableContents success, rowcount 1
+```
+
+The above test should create 16 .json files as well
+
+```shell
+ls -1 output/TXQWYIN_ET-json/ |  wc -l
 ```
 
 # Recommendations
