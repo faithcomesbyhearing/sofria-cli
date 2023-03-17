@@ -98,6 +98,7 @@ ls -1 output/ENGNKJO1ET-json/ |  wc -l
 ```
 
 # unit tests
+
 ```shell
 node tests/gqlquery_verses_by_usx.test.js
 ```
@@ -105,6 +106,7 @@ node tests/gqlquery_verses_by_usx.test.js
 # test verses
 
 ## Case 1
+
 ```shell
 # clean JSON output folder:
 rm -rf output/Akawaio_N2AKEBSS_USX-json/*.*
@@ -192,6 +194,52 @@ The above test should create 16 .json files as well
 ```shell
 ls -1 output/TXQWYIN_ET-json/ |  wc -l
 ```
+
+## Case 3
+
+```shell
+# clean JSON output folder:
+rm -rf ./output/SPNBDAO_ET-json/*.*
+```
+
+```shell
+# clean output folder:
+rm -rf ./output/SPNBDAO_ET-db
+```
+
+```shell
+# create output folder:
+mkdir ./output/SPNBDAO_ET-db
+```
+
+```shell
+# create db file:
+touch ./output/SPNBDAO_ET-db/SPNBDAO_ET.db
+```
+
+```shell
+node biblebrain_uploader.js run test/input/Spanish_N2SPNBDA_USX/ --populate-db=./output/SPNBDAO_ET-db/SPNBDAO_ET.db --generate-json=./output/SPNBDAO_ET-json --missing-verses-allowed="{ \"MAT\": { \"17\" : [21], \"18\" : [11], \"23\" : [14] } }"
+```
+
+- Outcome
+
+```shell
+Generate JSON => Generate JSON filese - Start process..
+Populate DB - Start process..
+Populate DB => Complete:  Mateo
+Populate DB => success
+Generate JSON => File list (1) processing completed
+Generate JSON => Complete USX File: test/input/Spanish_N2SPNBDA_USX/040MAT.usx
+load verses success, rowcount 1068
+load tableContents success, rowcount 1
+```
+
+The above test should create 28 .json files as well
+
+```shell
+ls -1 output/SPNBDAO_ET-json/ |  wc -l
+```
+
 
 # Recommendations
 

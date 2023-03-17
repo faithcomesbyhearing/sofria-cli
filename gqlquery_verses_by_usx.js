@@ -158,7 +158,32 @@ const getMissedVerses = function (verseSequenceList) {
   return [];
 };
 
-const getVersesToInsert = function (usxJson) {
+const getNoMissedVersesAllowed = function (
+  verseSequenceList,
+  missingVersesAllowedList = null
+) {
+  if (missingVersesAllowedList === null) {
+    return verseSequenceList;
+  }
+
+  const missingVersesAllowedIndexed = [];
+
+  missingVersesAllowedList.forEach((verse) => {
+    missingVersesAllowedIndexed[verse] = true;
+  });
+
+  const noMissedVersesAllowed = [];
+
+  verseSequenceList.forEach((verse) => {
+    if (missingVersesAllowedIndexed[verse] !== true) {
+      noMissedVersesAllowed.push(verse);
+    }
+  });
+
+  return noMissedVersesAllowed;
+};
+
+const getVersesToInsert = function (usxJson, missingVersesAllowed = null) {
   let versesRows = [];
 
   if (usxJson.chapters) {
@@ -176,12 +201,23 @@ const getVersesToInsert = function (usxJson) {
         const verseSequenceList = getListVerseSequence(versesListByChapter);
         verseSequenceList.sort((nextVerse, prevVerse) => nextVerse - prevVerse);
 
+        const missingVersesAllowedBy =
+          missingVersesAllowed !== null &&
+          missingVersesAllowed[usxJson.bookCode]
+            ? missingVersesAllowed[usxJson.bookCode][chapter.chapter]
+            : null;
+
         // Validate if the list of verses has missed verses checking if the list of numbers is not sequential list
         const missedVerses = getMissedVerses(verseSequenceList);
+        // Validate if the list of missing verses is contained in the list of allowed missing verses
+        const noMissedVersesAllowed =
+          missedVerses.length > 0
+            ? getNoMissedVersesAllowed(missedVerses, missingVersesAllowedBy)
+            : [];
 
-        if (missedVerses.length > 0) {
+        if (noMissedVersesAllowed.length > 0) {
           throw new Error(
-            `ERROR: verses: ${missedVerses.join(",")} in Book: ${
+            `ERROR: verses: ${noMissedVersesAllowed.join(",")} in Book: ${
               usxJson.bookCode
             } Chapter: ${chapter.chapter} are missing.`
           );
@@ -225,7 +261,11 @@ const getTableContentRow = function (usxJson) {
   ];
 };
 
-const run = async function (fqPath, datatabaseInput) {
+const run = async function (
+  fqPath,
+  datatabaseInput,
+  missingVersesAllowed = null
+) {
   try {
     console.info("Populate DB - Start process..");
 
@@ -248,7 +288,7 @@ const run = async function (fqPath, datatabaseInput) {
           const json = await generateJsonContentByUSXFile(
             fileUsxToProcess.file
           );
-          const verseRow = getVersesToInsert(json);
+          const verseRow = getVersesToInsert(json, missingVersesAllowed);
           const tableContentRow = getTableContentRow(json);
           console.info("Populate DB =>", "Complete: ", json.heading);
 
@@ -285,5 +325,6 @@ const run = async function (fqPath, datatabaseInput) {
 module.exports.getListVerseSequence = getListVerseSequence;
 module.exports.getVerseRowsFromChapters = getVerseRowsFromChapters;
 module.exports.getMissedVerses = getMissedVerses;
+module.exports.getNoMissedVersesAllowed = getNoMissedVersesAllowed;
 module.exports.getVersesToInsert = getVersesToInsert;
 module.exports.run = run;
