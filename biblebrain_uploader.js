@@ -30,7 +30,21 @@ yargs(hideBin(process.argv))
         }
 
         if (argv.populateDb) {
-          populateDBHandler.run(argv.directory, argv.populateDb);
+          let missingVersesAllowed = null;
+          if (argv.missingVersesAllowed) {
+            try {
+              missingVersesAllowed = JSON.parse(argv.missingVersesAllowed);
+            } catch (error) {
+              throw new Error(
+                `Error parsing JSON: ${argv.missingVersesAllowed}`
+              );
+            }
+          }
+          populateDBHandler.run(
+            argv.directory,
+            argv.populateDb,
+            missingVersesAllowed
+          );
         }
       } else {
         console.error("Directory path is required");
@@ -48,6 +62,12 @@ yargs(hideBin(process.argv))
     alias: "pdb",
     type: "string",
     description: "Sqlite Database path where it will be the verses",
+  })
+  .option("missing-verses-allowed", {
+    alias: "mva",
+    type: "string",
+    description:
+      "JSON string about indexed array is sorted by book, chapter, and missing verses allowed list",
   })
   .strictCommands()
   .demandCommand(1)

@@ -215,3 +215,58 @@ test("Same verse number but with different sub-category a and b", function (t) {
   t.equal(rangeVerseSequence, 5);
   t.equal(rangeVerseText, "chapter 7 test 5-6a");
 });
+
+test("Missed Verse allowed test", function (t) {
+  t.plan(2);
+
+  const usxJsonTesTemp = {
+    bookCode: "bookCodeTest",
+    chapters: [
+      { verses: versesTest1, chapter: 1 },
+      { verses: versesTest2, chapter: 2 },
+      { verses: versesTest3, chapter: 3 },
+      { verses: versesTest4, chapter: 4 },
+    ],
+  };
+
+  const missingVersesAllowedB = {
+    bookCodeTest: { 4: [3, 4, 5, 6, 7] },
+  };
+
+  const verseRow = populateDBHandler.getVersesToInsert(
+    usxJsonTesTemp,
+    missingVersesAllowedB
+  );
+  const lastIndex = verseRow.length - 1;
+  const lastVerseText = verseRow[lastIndex][2];
+
+  t.equal(verseRow.length, 22);
+  t.equal(lastVerseText, "chapter 4 test 8");
+});
+
+test("Incomplete Missed Verse allowed test", function (t) {
+  t.plan(1);
+
+  const usxJsonTesTemp = {
+    bookCode: "bookCodeTest",
+    chapters: [
+      { verses: versesTest1, chapter: 1 },
+      { verses: versesTest2, chapter: 2 },
+      { verses: versesTest3, chapter: 3 },
+      { verses: versesTest4, chapter: 4 },
+    ],
+  };
+
+  const missingVersesAllowedB = {
+    bookCodeTest: { 4: [3, 4, 5] },
+  };
+
+  try {
+    populateDBHandler.getVersesToInsert(usxJsonTesTemp, missingVersesAllowedB);
+  } catch (err) {
+    t.equal(
+      err.message,
+      "ERROR: verses: 6,7 in Book: bookCodeTest Chapter: 4 are missing."
+    );
+  }
+});
