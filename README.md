@@ -240,7 +240,6 @@ The above test should create 28 .json files as well
 ls -1 output/SPNBDAO_ET-json/ |  wc -l
 ```
 
-
 # Recommendations
 
 - Execute prettier command before each commit

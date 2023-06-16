@@ -7,10 +7,10 @@ const Filesystem = require("./util/filesystem");
 
 const { Proskomma } = require("proskomma");
 
-if (global.crypto !== "object") {
+if (global.crypto != "object") {
   global.crypto = {
     getRandomValues: (array) => {
-      if (crypto.webcrypto && crypto.webcrypto.getRandomValues) {
+      if (crypto.webcrypto?.getRandomValues) {
         return crypto.webcrypto.getRandomValues(array);
       }
 
@@ -19,7 +19,7 @@ if (global.crypto !== "object") {
   };
 }
 
-const generateJsonContentByUSXFile = async function (usxFile) {
+const generateJsonContentByUSXFile = function (usxFile) {
   const content = fse.readFileSync(usxFile.fullpath).toString();
 
   if (content !== "" && usxFile.suffix !== "") {
@@ -202,10 +202,7 @@ const getVersesToInsert = function (usxJson, missingVersesAllowed = null) {
         verseSequenceList.sort((nextVerse, prevVerse) => nextVerse - prevVerse);
 
         const missingVersesAllowedBy =
-          missingVersesAllowed !== null &&
-          missingVersesAllowed[usxJson.bookCode]
-            ? missingVersesAllowed[usxJson.bookCode][chapter.chapter]
-            : null;
+          missingVersesAllowed?.[usxJson.bookCode]?.[chapter.chapter] || null;
 
         // Validate if the list of verses has missed verses checking if the list of numbers is not sequential list
         const missedVerses = getMissedVerses(verseSequenceList);
@@ -216,8 +213,8 @@ const getVersesToInsert = function (usxJson, missingVersesAllowed = null) {
             : [];
 
         if (noMissedVersesAllowed.length > 0) {
-          throw new Error(
-            `ERROR: verses: ${noMissedVersesAllowed.join(",")} in Book: ${
+          console.warn(
+            `WARNING: verses: ${noMissedVersesAllowed.join(",")} in Book: ${
               usxJson.bookCode
             } Chapter: ${chapter.chapter} are missing.`
           );
@@ -284,10 +281,8 @@ const run = async function (
 
     const results = await Promise.all(
       listFilesToProcess.map(async (fileUsxToProcess) => {
-        return new Promise(async function (resolve, _) {
-          const json = await generateJsonContentByUSXFile(
-            fileUsxToProcess.file
-          );
+        return new Promise(function (resolve, _) {
+          const json = generateJsonContentByUSXFile(fileUsxToProcess.file);
           const verseRow = getVersesToInsert(json, missingVersesAllowed);
           const tableContentRow = getTableContentRow(json);
           console.info("Populate DB =>", "Complete: ", json.heading);

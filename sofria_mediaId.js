@@ -7,10 +7,10 @@ const { Proskomma } = require("proskomma");
 const NUM_USX_FILES_TO_PROCESS_ASYNC = 5;
 const NUM_CHAPTERS_TO_PROCESS_ASYNC = 4;
 
-if (global.crypto !== "object") {
+if (global.crypto != "object") {
   global.crypto = {
     getRandomValues: (array) => {
-      if (crypto.webcrypto && crypto.webcrypto.getRandomValues) {
+      if (crypto.webcrypto?.getRandomValues) {
         return crypto.webcrypto.getRandomValues(array);
       }
 
@@ -24,11 +24,11 @@ const zeroComplete = function (num, places) {
 };
 
 const generateChapterContent = function (chapter, usxFile, jsonPathOutput, pk) {
-  return new Promise(function (resolve, _) {
+  return new Promise(function (resolve, reject) {
     const chapterQuery = `{documents {sofria(indent: 2, chapter: ${chapter}) } }`;
     const gqlObject = pk.gqlQuerySync(chapterQuery);
 
-    if (gqlObject && gqlObject.data && gqlObject.data.documents[0]) {
+    if (gqlObject?.data?.documents[0]) {
       const chapterJson = gqlObject.data.documents[0].sofria;
       writeUsxJsonFile(
         {
@@ -37,10 +37,12 @@ const generateChapterContent = function (chapter, usxFile, jsonPathOutput, pk) {
           jsonContent: chapterJson,
         },
         jsonPathOutput
-      );
+      )
+        .then(() => resolve(true)) // Resolves the outer promise when writeUsxJsonFile completes
+        .catch(reject); // Propagates any error to the outer promise;
+    } else {
+      resolve(true);
     }
-
-    resolve(true);
   });
 };
 
