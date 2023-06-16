@@ -24,7 +24,7 @@ class Verses extends Model {
     for (const element of array) {
       const key = element[0];
       if (uniqueTest.has(key)) {
-        console.log(
+        throw new Error(
           "Duplicate verse reference " +
             key +
             " after " +

@@ -103,7 +103,7 @@ test("Verse Rows To Insert", function (t) {
 });
 
 test("Missed Verse test", function (t) {
-  t.plan(1);
+  t.plan(5);
 
   const usxJsonTesTemp = {
     bookCode: "bookCodeTest",
@@ -115,14 +115,22 @@ test("Missed Verse test", function (t) {
     ],
   };
 
-  try {
-    populateDBHandler.getVersesToInsert(usxJsonTesTemp);
-  } catch (err) {
-    t.equal(
-      err.message,
-      "ERROR: verses: 3,4,5,6,7 in Book: bookCodeTest Chapter: 4 are missing."
-    );
-  }
+  const verseRow = populateDBHandler.getVersesToInsert(usxJsonTesTemp);
+  const lastIndex = verseRow.length - 1;
+
+  t.equal(verseRow.length, 22);
+
+  const lastVerseSequence = verseRow[lastIndex][1];
+  const lastVerseText = verseRow[lastIndex][2];
+
+  t.equal(lastVerseSequence, 8);
+  t.equal(lastVerseText, "chapter 4 test 8");
+
+  const rangeVerseSequence = verseRow[lastIndex - 1][1];
+  const rangeVerseText = verseRow[lastIndex - 1][2];
+
+  t.equal(rangeVerseSequence, 2);
+  t.equal(rangeVerseText, "chapter 4 test 2");
 });
 
 test("Missed Range Verse diff = 1 test", function (t) {
@@ -214,4 +222,60 @@ test("Same verse number but with different sub-category a and b", function (t) {
 
   t.equal(rangeVerseSequence, 5);
   t.equal(rangeVerseText, "chapter 7 test 5-6a");
+});
+
+test("Missed Verse allowed test", function (t) {
+  t.plan(2);
+
+  const usxJsonTesTemp = {
+    bookCode: "bookCodeTest",
+    chapters: [
+      { verses: versesTest1, chapter: 1 },
+      { verses: versesTest2, chapter: 2 },
+      { verses: versesTest3, chapter: 3 },
+      { verses: versesTest4, chapter: 4 },
+    ],
+  };
+
+  const missingVersesAllowedB = {
+    bookCodeTest: { 4: [3, 4, 5, 6, 7] },
+  };
+
+  const verseRow = populateDBHandler.getVersesToInsert(
+    usxJsonTesTemp,
+    missingVersesAllowedB
+  );
+  const lastIndex = verseRow.length - 1;
+  const lastVerseText = verseRow[lastIndex][2];
+
+  t.equal(verseRow.length, 22);
+  t.equal(lastVerseText, "chapter 4 test 8");
+});
+
+test("Incomplete Missed Verse allowed test", function (t) {
+  t.plan(2);
+
+  const usxJsonTesTemp = {
+    bookCode: "bookCodeTest",
+    chapters: [
+      { verses: versesTest1, chapter: 1 },
+      { verses: versesTest2, chapter: 2 },
+      { verses: versesTest3, chapter: 3 },
+      { verses: versesTest4, chapter: 4 },
+    ],
+  };
+
+  const missingVersesAllowedB = {
+    bookCodeTest: { 4: [3, 4, 5] },
+  };
+
+  const verseRow = populateDBHandler.getVersesToInsert(
+    usxJsonTesTemp,
+    missingVersesAllowedB
+  );
+  const lastIndex = verseRow.length - 1;
+  const lastVerseText = verseRow[lastIndex][2];
+
+  t.equal(verseRow.length, 22);
+  t.equal(lastVerseText, "chapter 4 test 8");
 });
