@@ -5,7 +5,7 @@ const VersesModel = require("./model/Verses");
 const TableContentsModel = require("./model/TableContents");
 const Filesystem = require("./util/filesystem");
 
-const { Proskomma } = require("proskomma");
+const { Proskomma } = require("proskomma-core");
 
 if (global.crypto != "object") {
   global.crypto = {
@@ -282,25 +282,33 @@ const run = async function (
     const results = await Promise.all(
       listFilesToProcess.map(async (fileUsxToProcess) => {
         return new Promise(function (resolve, _) {
-          const json = generateJsonContentByUSXFile(fileUsxToProcess.file);
-          const verseRow = getVersesToInsert(json, missingVersesAllowed);
-          const tableContentRow = getTableContentRow(json);
-          console.info("Populate DB =>", "Complete: ", json.heading);
+          try {
+            const json = generateJsonContentByUSXFile(fileUsxToProcess.file);
+            const verseRow = getVersesToInsert(json, missingVersesAllowed);
+            const tableContentRow = getTableContentRow(json);
+            console.info("Populate DB =>", "Complete: ", json.heading);
 
-          resolve({ verseRow, tableContentRow, index: fileUsxToProcess.index });
+            resolve({ verseRow, tableContentRow, index: fileUsxToProcess.index });
+          } catch (error) {
+            console.error("Populate DB =>", "Error processing file:", fileUsxToProcess.file?.fullpath, "Error:", error.message);
+            resolve(null); // Return null for failed files so Promise.all continues
+          }
         });
       })
     );
 
-    if (results.length) {
-      results.sort((a, b) => a.index - b.index);
+    // Filter out null results from failed file processing
+    const successfulResults = results.filter(result => result !== null);
 
-      const verseRows = results.reduce(
+    if (successfulResults.length) {
+      successfulResults.sort((a, b) => a.index - b.index);
+
+      const verseRows = successfulResults.reduce(
         (verseList, result) => verseList.concat(result.verseRow),
         []
       );
 
-      const tableContentRows = results.map((result) => result.tableContentRow);
+      const tableContentRows = successfulResults.map((result) => result.tableContentRow);
 
       if (verseRows.length) {
         versesModel.load(verseRows, printError);
