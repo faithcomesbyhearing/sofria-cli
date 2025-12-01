@@ -1,6 +1,6 @@
 const path = require("path");
 const fse = require("fs-extra");
-const { Proskomma } = require("proskomma");
+const { Proskomma } = require("proskomma-core");
 if (process.argv.length !== 3) {
   throw new Error(`Expected exactly 1 argument (srcPath)`);
 }

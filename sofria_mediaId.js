@@ -3,7 +3,7 @@ const Filesystem = require("./util/filesystem");
 const crypto = require("crypto");
 const path = require("path");
 const fse = require("fs-extra");
-const { Proskomma } = require("proskomma");
+const { Proskomma } = require("proskomma-core");
 const NUM_USX_FILES_TO_PROCESS_ASYNC = 5;
 const NUM_CHAPTERS_TO_PROCESS_ASYNC = 4;
 
@@ -165,7 +165,8 @@ const run = async function (usxPathInput, jsonPathOutput) {
     function (error) {
       console.error(
         "Generate JSON =>",
-        "Error processing file list" + error.message
+        "Error processing file list" + error.message,
+        error
       );
     }
   );

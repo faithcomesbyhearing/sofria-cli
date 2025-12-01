@@ -104,3 +104,6 @@ dist
 .tern-port
 
 output/
+
+# Claude.ai files
+CLAUDE.md
